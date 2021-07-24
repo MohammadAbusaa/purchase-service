@@ -14,3 +14,6 @@
 $router->get('/', function () use ($router) {
     return $router->app->version();
 });
+
+$router->post('/purchase/{id}',['uses'=>'PurchaseController@purchase']);
+$router->get('/read',['uses'=>'PurchaseController@read']);
