@@ -13,14 +13,16 @@ class PurchaseController extends Controller{ //this controller handles purchase 
             (Int)$id;
         }
         catch(\Throwable $t){
-            return array('FAILED!');
+            return array('FAILED! INT');
         }
+        if($id<1||$id>2)return array('FAILED! ID');
+        set_time_limit(60);
         $client=new Client(); //the first request checks if the item is
         try{                  //out of stock or not
             $response=json_decode($client->get('http://192.168.1.21:8000/info/'.$id)->getBody());
         }
         catch(\Throwable $th){
-            return array('FAILED!');
+            return array('FAILED! INFO');
         }
         if($response->qty>0){
             $file=fopen('purchases.csv','a');
@@ -28,11 +30,32 @@ class PurchaseController extends Controller{ //this controller handles purchase 
                 [$id,Carbon::now()],
             ];
             foreach($data as $line)fputcsv($file,$line);
-            $client->put('http://192.168.1.21:8000/purchase/'.$id);//the second request
+            try {
+                $curl = curl_init();
+ 
+curl_setopt_array($curl, array(
+  CURLOPT_URL => '192.168.1.21:8000/purchase/'.$id,
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => '',
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 0,
+  CURLOPT_FOLLOWLOCATION => true,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => 'PUT',
+));
+ 
+$response = curl_exec($curl);
+ 
+curl_close($curl);
+            } catch (ConnectException $th) {
+                error_log('Failed put');
+            } catch (\Throwable $e){
+                error_log('failed : '. $e->getMessage());
+            }                                                      //the second request
             fclose($file);                                         //in case the item exists
             return array('DONE!');                                 //it is sent to inform the catalog server
         }                                                          //that the item was purchased 
-        else return array('FAILED!');
+        else return array('FAILED! QTY');
     }
 
     public function read()//this function is used for testing purposes only.
